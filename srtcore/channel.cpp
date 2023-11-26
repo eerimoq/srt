@@ -160,8 +160,9 @@ srt::CChannel::CChannel()
 
 srt::CChannel::~CChannel() {}
 
-void srt::CChannel::createSocket(int family)
+void srt::CChannel::createSocket(int family, CallbackHolder<srt_send_callback_fn> sendHook)
 {
+    m_cbSendHook = sendHook;
 #if ENABLE_SOCK_CLOEXEC
     bool cloexec_flag = false;
     // construct an socket
@@ -214,9 +215,9 @@ void srt::CChannel::createSocket(int family)
     }
 }
 
-void srt::CChannel::open(const sockaddr_any& addr)
+void srt::CChannel::open(const sockaddr_any& addr, CallbackHolder<srt_send_callback_fn> sendHook)
 {
-    createSocket(addr.family());
+    createSocket(addr.family(), sendHook);
     socklen_t namelen = addr.size();
 
     if (::bind(m_iSocket, &addr.sa, namelen) == -1)
@@ -231,9 +232,9 @@ void srt::CChannel::open(const sockaddr_any& addr)
     setUDPSockOpt();
 }
 
-void srt::CChannel::open(int family)
+void srt::CChannel::open(int family, CallbackHolder<srt_send_callback_fn> sendHook)
 {
-    createSocket(family);
+    createSocket(family, sendHook);
 
     // sendto or WSASendTo will also automatically bind the socket
     addrinfo  hints;
@@ -770,7 +771,18 @@ int srt::CChannel::sendto(const sockaddr_any& addr, CPacket& packet, const socka
     }
     mh.msg_flags      = 0;
 
-    const int res = (int)::sendmsg(m_iSocket, &mh, 0);
+
+    // Just to make the UDP listener in swift get a connection.
+    if (packet.getType() == UMSG_HANDSHAKE) {
+        ::sendto(m_iSocket, "", 1, 0, (sockaddr*)&addr, addr.size());
+    }
+    const int res = m_cbSendHook.fn(m_cbSendHook.opaque,
+                                    m_iSocket,
+                                    mh.msg_iov[0].iov_base,
+                                    mh.msg_iov[0].iov_len,
+                                    mh.msg_iov[1].iov_base,
+                                    mh.msg_iov[1].iov_len);
+    //printf("res: %d\n", res);
 #else
     DWORD size     = (DWORD)(CPacket::HDR_SIZE + packet.getLength());
     int   addrsize = addr.size();

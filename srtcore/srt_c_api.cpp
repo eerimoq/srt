@@ -401,6 +401,14 @@ int srt_connect_callback(SRTSOCKET lsn, srt_connect_callback_fn* hook, void* opa
     return CUDT::installConnectHook(lsn, hook, opaq);
 }
 
+int srt_send_callback(SRTSOCKET lsn, srt_send_callback_fn* hook, void* opaq)
+{
+    if (!hook)
+        return CUDT::APIError(MJ_NOTSUP, MN_INVAL);
+
+    return CUDT::installSendHook(lsn, hook, opaq);
+}
+
 uint32_t srt_getversion()
 {
     return SrtVersion(SRT_VERSION_MAJOR, SRT_VERSION_MINOR, SRT_VERSION_PATCH);

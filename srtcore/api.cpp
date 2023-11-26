@@ -894,6 +894,27 @@ int srt::CUDTUnited::installConnectHook(const SRTSOCKET u, srt_connect_callback_
     return 0;
 }
 
+int srt::CUDT::installSendHook(SRTSOCKET lsn, srt_send_callback_fn* hook, void* opaq)
+{
+    return uglobal().installSendHook(lsn, hook, opaq);
+}
+
+int srt::CUDTUnited::installSendHook(const SRTSOCKET lsn, srt_send_callback_fn* hook, void* opaq)
+{
+    try
+    {
+        CUDTSocket* s = locateSocket(lsn, ERH_THROW);
+        s->core().installSendHook(hook, opaq);
+    }
+    catch (CUDTException& e)
+    {
+        SetThreadLocalError(e);
+        return SRT_ERROR;
+    }
+
+    return 0;
+}
+
 SRT_SOCKSTATUS srt::CUDTUnited::getStatus(const SRTSOCKET u)
 {
     // protects the m_Sockets structure
@@ -3129,14 +3150,14 @@ void srt::CUDTUnited::updateMux(CUDTSocket* s, const sockaddr_any& reqaddr, cons
             // This here is used to pass family only, in this case
             // just automatically bind to the "0" address to autoselect
             // everything.
-            m.m_pChannel->open(reqaddr.family());
+            m.m_pChannel->open(reqaddr.family(), s->core().m_cbSendHook);
         }
         else
         {
             // If at least the IP address is specified, then bind to that
             // address, but still possibly autoselect the outgoing port, if the
             // port was specified as 0.
-            m.m_pChannel->open(reqaddr);
+            m.m_pChannel->open(reqaddr, s->core().m_cbSendHook);
         }
 
         // AFTER OPENING, check the matter of IPV6_V6ONLY option,
