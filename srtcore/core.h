@@ -1157,10 +1157,13 @@ private: // Receiving related data
 
     CallbackHolder<srt_listen_callback_fn> m_cbAcceptHook;
     CallbackHolder<srt_connect_callback_fn> m_cbConnectHook;
+    CallbackHolder<srt_send_callback_fn> m_cbSendHook;
+
     // FORWARDER
 public:
     static int installAcceptHook(SRTSOCKET lsn, srt_listen_callback_fn* hook, void* opaq);
     static int installConnectHook(SRTSOCKET lsn, srt_connect_callback_fn* hook, void* opaq);
+    static int installSendHook(SRTSOCKET lsn, srt_send_callback_fn* hook, void* opaq);
     static enum HandshakeSide compareCookies(int32_t req, int32_t res);
     static enum HandshakeSide backwardCompatibleCookieContest(int32_t req, int32_t res);
 private:
@@ -1178,6 +1181,11 @@ private:
             throw CUDTException(MJ_NOTSUP, MN_ISCONNECTED, 0);
 
         m_cbConnectHook.set(opaq, hook);
+    }
+
+    void installSendHook(srt_send_callback_fn* hook, void* opaq)
+    {
+        m_cbSendHook.set(opaq, hook);
     }
 
 
