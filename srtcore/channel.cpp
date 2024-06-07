@@ -771,17 +771,21 @@ int srt::CChannel::sendto(const sockaddr_any& addr, CPacket& packet, const socka
     }
     mh.msg_flags      = 0;
 
-
-    // Just to make the UDP listener in swift get a connection.
-    if (packet.getType() == UMSG_HANDSHAKE) {
-        ::sendto(m_iSocket, "", 1, 0, (sockaddr*)&addr, addr.size());
+    int res = 0;
+    if (m_cbSendHook.fn != NULL) {
+        // Just to make the UDP listener in swift get a connection.
+        if (packet.getType() == UMSG_HANDSHAKE) {
+            ::sendto(m_iSocket, "", 1, 0, (sockaddr*)&addr, addr.size());
+        }
+        res = m_cbSendHook.fn(m_cbSendHook.opaque,
+                              m_iSocket,
+                              mh.msg_iov[0].iov_base,
+                              mh.msg_iov[0].iov_len,
+                              mh.msg_iov[1].iov_base,
+                              mh.msg_iov[1].iov_len);
+    } else {
+        res = (int)::sendmsg(m_iSocket, &mh, 0);
     }
-    const int res = m_cbSendHook.fn(m_cbSendHook.opaque,
-                                    m_iSocket,
-                                    mh.msg_iov[0].iov_base,
-                                    mh.msg_iov[0].iov_len,
-                                    mh.msg_iov[1].iov_base,
-                                    mh.msg_iov[1].iov_len);
     //printf("res: %d\n", res);
 #else
     DWORD size     = (DWORD)(CPacket::HDR_SIZE + packet.getLength());
