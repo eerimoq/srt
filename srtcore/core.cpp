@@ -12112,7 +12112,7 @@ int srt::CUDT::checkNAKTimer(const steady_clock::time_point& currtime)
         if (currtime <= m_tsNextNAKTime.load())
             return BECAUSE_NO_REASON; // wait for next NAK time
 
-        sendCtrl(UMSG_LOSSREPORT);
+        // sendCtrl(UMSG_LOSSREPORT);
         debug_decision = BECAUSE_NAKREPORT;
     }
 
